@@ -1,0 +1,119 @@
+:root {
+  --ios-bg: #000000;
+  --ios-surface: rgba(28, 28, 30, 0.6);
+  --ios-surface-highlight: rgba(44, 44, 46, 0.8);
+  --ios-text: #ffffff;
+  --ios-blur: 20px;
+  --pad-gap: 12px;
+  --pad-radius: 12px;
+}
+
+body {
+  background-color: var(--ios-bg);
+  color: var(--ios-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 100%);
+}
+
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.glass-nav {
+  background: rgba(20, 20, 20, 0.7);
+  backdrop-filter: blur(var(--ios-blur));
+  -webkit-backdrop-filter: blur(var(--ios-blur));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.midiboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--pad-gap);
+  padding: 20px;
+  background: var(--ios-surface);
+  backdrop-filter: blur(var(--ios-blur));
+  -webkit-backdrop-filter: blur(var(--ios-blur));
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.pad {
+  aspect-ratio: 1;
+  border-radius: var(--pad-radius);
+  border: none;
+  background: rgba(60, 60, 60, 0.5);
+  transition: all 0.1s ease-out;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px;
+  user-select: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.pad:active,
+.pad.active {
+  transform: scale(0.96);
+  filter: brightness(1.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.pad-label {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  text-align: left;
+}
+
+.pad-key {
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-align: right;
+  opacity: 0.4;
+}
+
+/* Colors for rows/groups to match the reference image roughly */
+.pad-row-0 {
+  background: linear-gradient(135deg, #00c6fb 0%, #005bea 100%);
+}
+
+/* Cyan/Blue */
+.pad-row-1 {
+  background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+}
+
+/* Orange */
+.pad-row-2 {
+  background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+}
+
+/* Green/Blue */
+.pad-row-3 {
+  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+}
+
+/* Red/Pink */
+
+/* Specific overrides to match the image more closely if needed, but gradients are nice */
+.pad.empty {
+  background: rgba(40, 40, 40, 0.5);
+}
+
+.pad.has-sound {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.pad.drag-over {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px dashed rgba(255, 255, 255, 0.8);
+  transform: scale(1.02);
+}
