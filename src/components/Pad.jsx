@@ -9,9 +9,11 @@ const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
     const mapping = soundMappings[id];
 
     const playSound = () => {
-        playContextSound(id);
-        setIsActive(true);
-        setTimeout(() => setIsActive(false), 150);
+        if (mapping) {
+            playContextSound(id);
+            setIsActive(true);
+            setTimeout(() => setIsActive(false), 150);
+        }
     };
 
     useEffect(() => {
@@ -52,7 +54,8 @@ const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
     };
 
     // Determine color class based on row index or if it has sound
-    const colorClass = mapping ? `pad - row - ${rowIndex} ` : 'empty';
+    // Removed row-based coloring as per request for unique colors
+    const colorClass = mapping ? '' : 'empty';
 
     const getLabel = () => {
         if (isConfigMode && !mapping) return "Drop Audio";
@@ -60,7 +63,7 @@ const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
         return label;
     };
 
-    // Generate a unique color based on the ID
+    // Generate a unique color based on the ID (fallback if no mapping color)
     const getPadColor = (id) => {
         // Simple hash to get a hue value 0-360
         let hash = 0;
@@ -68,10 +71,11 @@ const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
             hash = id.toString().charCodeAt(i) + ((hash << 5) - hash);
         }
         const hue = Math.abs(hash % 360);
-        return `hsl(${hue}, 70 %, 60 %)`;
+        return `hsl(${hue}, 70%, 60%)`;
     };
 
-    const glowColor = getPadColor(id);
+    // Use mapped color if available, otherwise fallback to ID-based color
+    const activeColor = mapping?.color || getPadColor(id);
 
     // Added functions for file upload
     const handleUploadClick = (e) => {
@@ -88,15 +92,26 @@ const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
         e.target.value = null;
     };
 
+    // Determine background color
+    const getBackgroundColor = () => {
+        if (isActive) return activeColor; // Pressed (Play or Config)
+        if (isConfigMode && mapping) return activeColor; // Config Mapped
+        return undefined; // Default CSS (neutral)
+    };
+
+    // Determine glow/border (Play mode gets glow ONLY when pressed, Config mode gets flat)
+    const showGlow = !isConfigMode && isActive && mapping;
+
     return (
         <div
-            className={`pad ${colorClass} ${isActive ? 'active' : ''} ${mapping ? 'has-sound' : ''} ${isDragOver ? 'drag-over' : ''} `}
-            style={isActive ? {
-                boxShadow: `0 0 20px ${glowColor}, 0 0 40px ${glowColor} `,
-                borderColor: glowColor,
-                transform: 'scale(0.98)',
-                position: 'relative' // Added for absolute positioning of upload icon
-            } : { position: 'relative' }} // Added for absolute positioning of upload icon
+            className={`pad ${colorClass} ${isActive ? 'active' : ''} ${mapping ? 'has-sound' : ''} ${isDragOver ? 'drag-over' : ''}`}
+            style={{
+                backgroundColor: getBackgroundColor(),
+                boxShadow: showGlow ? `0 0 20px ${activeColor}, 0 0 40px ${activeColor}` : 'none',
+                borderColor: showGlow ? activeColor : 'transparent',
+                transform: isActive ? 'scale(0.98)' : 'scale(1)',
+                position: 'relative'
+            }}
             onClick={!isConfigMode ? playSound : undefined} // Only play sound if not in config mode
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -120,12 +135,12 @@ const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
                         title="Upload Sound"
                         style={{
                             position: 'absolute',
-                            top: '5px',
-                            right: '5px',
+                            bottom: '8px', // Matched to pad padding
+                            left: '8px',   // Matched to pad padding
                             cursor: 'pointer',
                             opacity: 0.7,
                             transition: 'opacity 0.2s',
-                            zIndex: 10 // Ensure icon is above other elements
+                            zIndex: 10
                         }}
                         onMouseEnter={(e) => e.target.style.opacity = 1}
                         onMouseLeave={(e) => e.target.style.opacity = 0.7}

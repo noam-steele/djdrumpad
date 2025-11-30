@@ -39,12 +39,17 @@ export const SoundProvider = ({ children }) => {
       const arrayBuffer = await file.arrayBuffer();
       const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
 
+      // Generate a random HSL color for this mapping
+      const hue = Math.floor(Math.random() * 360);
+      const randomColor = `hsl(${hue}, 70%, 60%)`;
+
       setSoundMappings(prev => ({
         ...prev,
         [padId]: {
           buffer: audioBuffer,
           name: file.name,
-          originalFile: file
+          originalFile: file,
+          color: randomColor
         }
       }));
     } catch (error) {
