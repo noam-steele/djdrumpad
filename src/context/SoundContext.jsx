@@ -1,63 +1,161 @@
-import React, { createContext, useState, useContext } from 'react';
+
+import React, { createContext, useState, useContext, useRef, useEffect } from 'react';
 
 const SoundContext = createContext();
 
 export const useSound = () => useContext(SoundContext);
 
 export const SoundProvider = ({ children }) => {
-  // Initial state: empty mappings or default sounds if we had them
-  // Structure: { 'pad-1': { url: '...', name: '...' }, ... }
   const [soundMappings, setSoundMappings] = useState({});
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedUrl, setRecordedUrl] = useState(null);
 
-  const updateMapping = (padId, file) => {
-    const url = URL.createObjectURL(file);
-    setSoundMappings(prev => ({
-      ...prev,
-      [padId]: {
-        url,
-        name: file.name,
-        originalFile: file
+  const audioContextRef = useRef(null);
+  const masterGainRef = useRef(null);
+  const destRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  // Initialize AudioContext
+  useEffect(() => {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioContext();
+    const gainNode = ctx.createGain();
+    const dest = ctx.createMediaStreamDestination();
+
+    gainNode.connect(ctx.destination);
+    gainNode.connect(dest);
+
+    audioContextRef.current = ctx;
+    masterGainRef.current = gainNode;
+    destRef.current = dest;
+
+    return () => {
+      if (ctx.state !== 'closed') {
+        ctx.close();
       }
-    }));
-  };
+    };
+  }, []);
 
-  const loadSamples = (files) => {
-    setSoundMappings(prev => {
-      const newMappings = { ...prev };
-      let fileIndex = 0;
-      // We have 16 pads, IDs are usually 'pad-0' to 'pad-15' or similar. 
-      // Let's assume the IDs are passed or we iterate through standard IDs.
-      // Actually, Pad IDs are likely passed from Grid. Let's look at Grid.jsx to be sure of ID format.
-      // But wait, I don't have access to Grid.jsx right now in this context.
-      // Let's assume standard 0-15 index for now and we can fix if IDs are different.
-      // Based on Pad.jsx, it receives `id`.
-      // Let's just fill empty slots first, then overwrite if needed?
-      // User said "add multiple audio samples at once".
+  const loadSamples = async (files) => {
+    if (!audioContextRef.current) return;
 
-      // Let's iterate 0 to 15.
-      for (let i = 0; i < 16; i++) {
-        if (fileIndex >= files.length) break;
+    // Resume context if suspended (browser policy)
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+    }
 
-        // If this pad is empty, fill it.
-        // If we want to just fill sequentially from the start or fill empty ones?
-        // "add multiple audio samples" implies filling empty or just populating.
-        // Let's fill empty slots first.
-        if (!newMappings[i]) {
-          const file = files[fileIndex];
+    const newMappings = { ...soundMappings };
+    let fileIndex = 0;
+
+    for (let i = 0; i < 16; i++) {
+      if (fileIndex >= files.length) break;
+
+      if (!newMappings[i]) {
+        const file = files[fileIndex];
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+
           newMappings[i] = {
-            url: URL.createObjectURL(file),
+            buffer: audioBuffer,
             name: file.name,
             originalFile: file
           };
           fileIndex++;
+        } catch (error) {
+          console.error("Error decoding audio file:", file.name, error);
         }
       }
-      return newMappings;
-    });
+    }
+    setSoundMappings(newMappings);
+  };
+
+  const updateMapping = async (padId, file) => {
+    if (!audioContextRef.current) return;
+    // Resume context if suspended
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+    }
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+
+      setSoundMappings(prev => ({
+        ...prev,
+        [padId]: {
+          buffer: audioBuffer,
+          name: file.name,
+          originalFile: file
+        }
+      }));
+    } catch (error) {
+      console.error("Error decoding audio file:", file.name, error);
+    }
+  };
+
+  const playSound = (padId) => {
+    const mapping = soundMappings[padId];
+    if (mapping?.buffer && audioContextRef.current) {
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = mapping.buffer;
+      source.connect(masterGainRef.current);
+      source.start(0);
+    }
+  };
+
+  const startRecording = () => {
+    if (!destRef.current) return;
+    chunksRef.current = [];
+    const recorder = new MediaRecorder(destRef.current.stream);
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        chunksRef.current.push(e.data);
+      }
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      const url = URL.createObjectURL(blob);
+      setRecordedUrl(url);
+    };
+
+    recorder.start();
+    mediaRecorderRef.current = recorder;
+    setIsRecording(true);
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const discardRecording = () => {
+    if (recordedUrl) {
+      window.URL.revokeObjectURL(recordedUrl);
+      setRecordedUrl(null);
+    }
   };
 
   return (
-    <SoundContext.Provider value={{ soundMappings, updateMapping, loadSamples }}>
+    <SoundContext.Provider value={{
+      soundMappings,
+      updateMapping,
+      loadSamples,
+      playSound,
+      startRecording,
+      stopRecording,
+      isRecording,
+      recordedUrl,
+      discardRecording
+    }}>
       {children}
     </SoundContext.Provider>
   );

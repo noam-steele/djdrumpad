@@ -1,29 +1,17 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSound } from '../context/SoundContext';
 
 const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
-    const { soundMappings } = useSound();
+    const { soundMappings, playSound: playContextSound } = useSound();
     const [isActive, setIsActive] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
-    const audioRef = useRef(null);
     const mapping = soundMappings[id];
 
     const playSound = () => {
-        if (mapping?.url) {
-            if (audioRef.current) {
-                audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(e => console.error("Audio play failed", e));
-            }
-        }
+        playContextSound(id);
         setIsActive(true);
         setTimeout(() => setIsActive(false), 150);
     };
-
-    useEffect(() => {
-        if (mapping?.url) {
-            audioRef.current = new Audio(mapping.url);
-        }
-    }, [mapping]);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
