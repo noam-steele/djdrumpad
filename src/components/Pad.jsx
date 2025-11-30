@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSound } from '../context/SoundContext';
 
 const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
     const { soundMappings, playSound: playContextSound } = useSound();
     const [isActive, setIsActive] = useState(false);
+    const fileInputRef = useRef(null);
     const [isDragOver, setIsDragOver] = useState(false);
     const mapping = soundMappings[id];
 
@@ -51,7 +52,7 @@ const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
     };
 
     // Determine color class based on row index or if it has sound
-    const colorClass = mapping ? `pad-row-${rowIndex}` : 'empty';
+    const colorClass = mapping ? `pad - row - ${rowIndex} ` : 'empty';
 
     const getLabel = () => {
         if (isConfigMode && !mapping) return "Drop Audio";
@@ -67,26 +68,75 @@ const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
             hash = id.toString().charCodeAt(i) + ((hash << 5) - hash);
         }
         const hue = Math.abs(hash % 360);
-        return `hsl(${hue}, 70%, 60%)`;
+        return `hsl(${hue}, 70 %, 60 %)`;
     };
 
     const glowColor = getPadColor(id);
 
+    // Added functions for file upload
+    const handleUploadClick = (e) => {
+        e.stopPropagation(); // Prevent pad click from firing
+        fileInputRef.current.click();
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            onDrop(id, file);
+        }
+        // Clear the input value so the same file can be selected again
+        e.target.value = null;
+    };
+
     return (
         <div
-            className={`pad ${colorClass} ${isActive ? 'active' : ''} ${mapping ? 'has-sound' : ''} ${isDragOver ? 'drag-over' : ''}`}
+            className={`pad ${colorClass} ${isActive ? 'active' : ''} ${mapping ? 'has-sound' : ''} ${isDragOver ? 'drag-over' : ''} `}
             style={isActive ? {
-                boxShadow: `0 0 20px ${glowColor}, 0 0 40px ${glowColor}`,
+                boxShadow: `0 0 20px ${glowColor}, 0 0 40px ${glowColor} `,
                 borderColor: glowColor,
-                transform: 'scale(0.98)'
-            } : {}}
-            onClick={playSound}
+                transform: 'scale(0.98)',
+                position: 'relative' // Added for absolute positioning of upload icon
+            } : { position: 'relative' }} // Added for absolute positioning of upload icon
+            onClick={!isConfigMode ? playSound : undefined} // Only play sound if not in config mode
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
         >
             <div className="pad-label">{getLabel()}</div>
             <div className="pad-key">{keyBind.toUpperCase()}</div>
+
+            {isConfigMode && (
+                <>
+                    <input
+                        type="file"
+                        accept="audio/*"
+                        style={{ display: 'none' }}
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                    />
+                    <div
+                        className="upload-icon"
+                        onClick={handleUploadClick}
+                        title="Upload Sound"
+                        style={{
+                            position: 'absolute',
+                            top: '5px',
+                            right: '5px',
+                            cursor: 'pointer',
+                            opacity: 0.7,
+                            transition: 'opacity 0.2s',
+                            zIndex: 10 // Ensure icon is above other elements
+                        }}
+                        onMouseEnter={(e) => e.target.style.opacity = 1}
+                        onMouseLeave={(e) => e.target.style.opacity = 0.7}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z" />
+                        </svg>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
