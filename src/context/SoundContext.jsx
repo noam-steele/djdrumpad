@@ -108,10 +108,19 @@ export const SoundProvider = ({ children }) => {
     }
   };
 
-  const startRecording = () => {
+  const startRecording = async () => {
     if (!destRef.current) return;
+
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+    }
+
     chunksRef.current = [];
-    const recorder = new MediaRecorder(destRef.current.stream);
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+
+    const recorder = new MediaRecorder(destRef.current.stream, { mimeType });
 
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
