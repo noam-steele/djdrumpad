@@ -71,9 +71,27 @@ const Pad = ({ id, keyBind, label, rowIndex, isConfigMode, onDrop }) => {
         return label;
     };
 
+    // Generate a unique color based on the ID
+    const getPadColor = (id) => {
+        // Simple hash to get a hue value 0-360
+        let hash = 0;
+        for (let i = 0; i < id.toString().length; i++) {
+            hash = id.toString().charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = Math.abs(hash % 360);
+        return `hsl(${hue}, 70%, 60%)`;
+    };
+
+    const glowColor = getPadColor(id);
+
     return (
         <div
             className={`pad ${colorClass} ${isActive ? 'active' : ''} ${mapping ? 'has-sound' : ''} ${isDragOver ? 'drag-over' : ''}`}
+            style={isActive ? {
+                boxShadow: `0 0 20px ${glowColor}, 0 0 40px ${glowColor}`,
+                borderColor: glowColor,
+                transform: 'scale(0.98)'
+            } : {}}
             onClick={playSound}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
